@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lane Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt: #26282c;
+    --asphalt-dark: #1b1c1f;
+    --line: #ece6d6;
+    --green: #157a42;
+    --green-glow: #22c374;
+    --amber: #e8a33d;
+    --amber-glow: #ffc861;
+    --red: #c22a2a;
+    --red-glow: #ff5050;
+    --sign-green: #0b5c37;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--asphalt-dark);
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(255,255,255,0.03), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(255,255,255,0.02), transparent 40%);
+    color:var(--line);
+    font-family:'Oswald', sans-serif;
+    min-height:100vh;
+    padding:0 0 40px;
+  }
+
+  header{
+    background:var(--sign-green);
+    border-bottom:6px solid #063c22;
+    padding:22px 20px 18px;
+    text-align:center;
+    box-shadow:0 4px 14px rgba(0,0,0,0.4);
+  }
+  .eyebrow{
+    font-size:0.68rem;
+    letter-spacing:0.35em;
+    color:#bfe3cc;
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  h1{
+    margin:0;
+    font-weight:700;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    font-size:1.5rem;
+    color:#fdfdf6;
+  }
+  .route-shield{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:26px;height:26px;
+    border:2px solid #fdfdf6;
+    border-radius:5px;
+    font-size:0.85rem;
+    font-weight:700;
+    margin-right:8px;
+    vertical-align:middle;
+  }
+
+  .preview-tag{
+    text-align:center;
+    font-family:'VT323', monospace;
+    font-size:1rem;
+    color:#8a8f96;
+    letter-spacing:0.05em;
+    margin:14px 0 0;
+  }
+
+  .highway{
+    max-width:480px;
+    margin:28px auto 0;
+    padding:0 20px;
+  }
+
+  .lanes{
+    display:flex;
+    gap:10px;
+    background:var(--asphalt);
+    border-radius:14px;
+    padding:14px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04), 0 10px 30px rgba(0,0,0,0.35);
+  }
+
+  .lane{
+    flex:1;
+    position:relative;
+    height:220px;
+    border-radius:8px;
+    overflow:hidden;
+    background:#2f3236;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05);
+  }
+
+  .lane-dashes{
+    position:absolute;
+    top:0; left:50%;
+    width:4px;
+    height:200%;
+    margin-left:-2px;
+    background-image:repeating-linear-gradient(
+      to bottom,
+      var(--line) 0px, var(--line) 22px,
+      transparent 22px, transparent 44px
+    );
+    opacity:0.35;
+    animation:flow 0.7s linear infinite;
+  }
+  @keyframes flow{
+    from{ transform:translateY(-50%); }
+    to{ transform:translateY(0%); }
+  }
+
+  .lane.green .lane-dashes{ animation-duration:0.5s; opacity:0.55; }
+  .lane.yellow .lane-dashes{ animation-duration:1.6s; opacity:0.4; }
+  .lane.red .lane-dashes{ animation-play-state:paused; opacity:0.18; }
+
+  .lane-fill{
+    position:absolute; inset:0;
+    opacity:0.32;
+    transition:background 0.4s ease;
+  }
+  .lane.green .lane-fill{ background:var(--green); }
+  .lane.yellow .lane-fill{ background:var(--amber); }
+  .lane.red .lane-fill{ background:var(--red); }
+
+  .lane-label{
+    position:absolute;
+    top:12px; left:0; right:0;
+    text-align:center;
+    font-size:0.72rem;
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    color:#c9cdd2;
+    z-index:2;
+  }
+
+  .lane-status{
+    position:absolute;
+    bottom:14px; left:0; right:0;
+    text-align:center;
+    font-weight:700;
+    font-size:0.95rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    z-index:2;
+    text-shadow:0 2px 8px rgba(0,0,0,0.5);
+  }
+  .lane.green .lane-status{ color:var(--green-glow); }
+  .lane.yellow .lane-status{ color:var(--amber-glow); }
+  .lane.red .lane-status{ color:var(--red-glow); }
+
+  .dot{
+    width:10px;height:10px;border-radius:50%;
+    margin:0 auto 8px;
+    z-index:2;position:relative;
+  }
+  .lane.green .dot{ background:var(--green-glow); box-shadow:0 0 10px var(--green-glow); }
+  .lane.yellow .dot{ background:var(--amber-glow); box-shadow:0 0 10px var(--amber-glow); }
+  .lane.red .dot{ background:var(--red-glow); box-shadow:0 0 10px var(--red-glow); }
+
+  .lane-icon{
+    position:absolute;
+    top:44px; left:0; right:0;
+    text-align:center;
+    z-index:2;
+  }
+  .lane-icon svg{ width:46px; height:46px; }
+  .lane.green .lane-icon svg{ stroke:var(--green-glow); filter:drop-shadow(0 0 6px rgba(34,195,116,0.7)); }
+  .lane.yellow .lane-icon svg{ stroke:var(--amber-glow); filter:drop-shadow(0 0 6px rgba(255,200,97,0.7)); }
+  .lane.red .lane-icon svg{ stroke:var(--red-glow); filter:drop-shadow(0 0 6px rgba(255,80,80,0.7)); }
+
+  #banner{
+    max-width:480px;
+    margin:20px auto 0;
+    padding:16px 18px;
+    border-radius:8px;
+    background:#0d0b08;
+    border:1px solid #3a2f1c;
+    box-shadow:inset 0 0 20px rgba(0,0,0,0.6);
+    display:none;
+    text-align:center;
+  }
+  #banner.show{ display:block; }
+  #banner p{
+    margin:0;
+    font-family:'VT323', monospace;
+    font-size:1.5rem;
+    letter-spacing:0.06em;
+    color:var(--amber-glow);
+    text-shadow:0 0 6px rgba(255,200,97,0.7), 0 0 14px rgba(255,200,97,0.35);
+    animation:flicker 2.4s infinite;
+  }
+  @keyframes flicker{
+    0%,100%{ opacity:1; }
+    92%{ opacity:1; }
+    93%{ opacity:0.75; }
+    94%{ opacity:1; }
+  }
+
+  .controls{
+    max-width:480px;
+    margin:34px auto 0;
+    padding:16px 20px;
+    border-top:1px dashed #3a3d42;
+  }
+  .controls p{
+    font-family:'VT323', monospace;
+    font-size:1rem;
+    color:#787d84;
+    margin:0 0 10px;
+    letter-spacing:0.03em;
+  }
+  .controls-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  select{
+    flex:1;
+    min-width:110px;
+    background:#1e2023;
+    color:var(--line);
+    border:1px solid #3a3d42;
+    border-radius:6px;
+    padding:8px 6px;
+    font-family:'Oswald', sans-serif;
+    font-size:0.8rem;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .lane-dashes{ animation:none !important; }
+    #banner p{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Live Lane Monitor</div>
+  <h1><span class="route-shield">3</span>Smart Traffic Status</h1>
+</header>
+
+<div class="preview-tag">&gt; preview mode — simulated readings, no device connected</div>
+
+<div class="highway">
+  <div class="lanes">
+    <div class="lane" id="l1">
+      <div class="lane-fill"></div>
+      <div class="lane-dashes"></div>
+      <div class="lane-label">Lane 1</div>
+      <div class="lane-icon"></div>
+      <div class="lane-status"><span class="dot"></span><span class="status-text">—</span></div>
+    </div>
+    <div class="lane" id="l2">
+      <div class="lane-fill"></div>
+      <div class="lane-dashes"></div>
+      <div class="lane-label">Lane 2</div>
+      <div class="lane-icon"></div>
+      <div class="lane-status"><span class="dot"></span><span class="status-text">—</span></div>
+    </div>
+    <div class="lane" id="l3">
+      <div class="lane-fill"></div>
+      <div class="lane-dashes"></div>
+      <div class="lane-label">Lane 3</div>
+      <div class="lane-icon"></div>
+      <div class="lane-status"><span class="dot"></span><span class="status-text">—</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="banner"><p id="banner-text"></p></div>
+
+<div class="controls" id="live-controls">
+  <p>&gt; connect to Arduino Uno R4 WiFi</p>
+  <div class="controls-row">
+    <input type="text" id="arduino-ip" placeholder="e.g. 192.168.1.42" style="flex:2;min-width:140px;background:#1e2023;color:var(--line);border:1px solid #3a3d42;border-radius:6px;padding:8px 10px;font-family:'Oswald',sans-serif;font-size:0.8rem;">
+    <button onclick="goLive()" style="flex:1;min-width:100px;background:var(--sign-green);color:#fdfdf6;border:none;border-radius:6px;padding:8px 6px;font-family:'Oswald',sans-serif;font-weight:600;font-size:0.8rem;cursor:pointer;">Connect</button>
+  </div>
+  <p id="conn-state" style="margin-top:10px;"></p>
+</div>
+
+<div class="controls">
+  <p>&gt; simulate sensor readings (for testing without hardware)</p>
+  <div class="controls-row">
+    <select id="s1" onchange="simUpdate()"></select>
+    <select id="s2" onchange="simUpdate()"></select>
+    <select id="s3" onchange="simUpdate()"></select>
+  </div>
+</div>
+
+<script>
+function txt(s){ return s==0?'Traffic':(s==1?'Slow':'Clear'); }
+function stateClass(s){ return s==0?'red':(s==1?'yellow':'green'); }
+
+const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4M5 11l7-7 7 7"/></svg>';
+const CROSS = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function icon(s){ return s==0 ? CROSS : ARROW; }
+
+[1,2,3].forEach(n=>{
+  const sel = document.getElementById('s'+n);
+  [[0,'Traffic (red)'],[1,'Slow (yellow)'],[2,'Clear (green)']].forEach(([v,label])=>{
+    const opt = document.createElement('option');
+    opt.value = v; opt.innerText = label;
+    if(n==1 && v==0) opt.selected = true;
+    if(n!=1 && v==2) opt.selected = true;
+    sel.appendChild(opt);
+  });
+});
+
+function render(d){
+  const blocked = [];
+  const open = [];
+
+  [1,2,3].forEach(n=>{
+    const s = d['lane'+n];
+    const el = document.getElementById('l'+n);
+    el.className = 'lane ' + stateClass(s);
+    el.querySelector('.status-text').innerText = txt(s);
+    el.querySelector('.lane-icon').innerHTML = icon(s);
+    if(s==0){ blocked.push(n); } else { open.push(n); }
+  });
+
+  const b = document.getElementById('banner');
+  const bt = document.getElementById('banner-text');
+
+  if(blocked.length===0){
+    b.classList.remove('show');
+  } else if(blocked.length===3){
+    b.classList.add('show');
+    bt.innerText = '>> ALL LANES BLOCKED — SEEK ALTERNATE ROUTE';
+  } else {
+    b.classList.add('show');
+    const laneWord = blocked.length>1 ? 'LANES' : 'LANE';
+    const blockedList = blocked.join(' & ');
+    const mergeWord = open.length>1 ? 'LANES' : 'LANE';
+    const openList = open.join(' OR ');
+    bt.innerText = `>> ${laneWord} ${blockedList} BLOCKED — MERGE TO ${mergeWord} ${openList}`;
+  }
+}
+
+// ---- Simulate mode (dropdowns) ----
+function simUpdate(){
+  render({
+    lane1: Number(document.getElementById('s1').value),
+    lane2: Number(document.getElementById('s2').value),
+    lane3: Number(document.getElementById('s3').value)
+  });
+}
+
+// ---- Live mode (real Arduino Uno R4 WiFi) ----
+let liveInterval = null;
+let liveIp = null;
+
+async function fetchStatus(){
+  const el = document.getElementById('conn-state');
+  try{
+    const res = await fetch(`http://${liveIp}/status`, {cache:'no-store'});
+    if(!res.ok) throw new Error('bad response');
+    const data = await res.json();
+    render(data);
+    el.innerText = '> live — last update just now';
+    el.style.color = '#8a8f96';
+  }catch(e){
+    el.innerText = '> connection lost, retrying...';
+    el.style.color = 'var(--amber-glow)';
+  }
+}
+
+function goLive(){
+  const ip = document.getElementById('arduino-ip').value.trim();
+  if(!ip) return;
+  liveIp = ip;
+  localStorage.setItem('laneMonitorIp', ip);
+  document.querySelector('.preview-tag').innerText = '> live mode — connected to ' + ip;
+  if(liveInterval) clearInterval(liveInterval);
+  fetchStatus();
+  liveInterval = setInterval(fetchStatus, 1500);
+}
+
+// Remember the last IP so you don't have to retype it every time.
+const savedIp = localStorage.getItem('laneMonitorIp');
+if(savedIp){
+  document.getElementById('arduino-ip').value = savedIp;
+  goLive();
+}
+
+// Start in simulate mode until the user connects to a real board.
+simUpdate();
+</script>
+</body>
+</html>
